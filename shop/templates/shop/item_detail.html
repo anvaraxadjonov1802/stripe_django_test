@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Buy {{ item.name }}</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .card {
+            width: 460px;
+            background: white;
+            border-radius: 18px;
+            padding: 32px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .item-image {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 240px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 28px;
+            color: #111827;
+        }
+
+        .description {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .price {
+            font-size: 32px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 24px;
+        }
+
+        .price span {
+            font-size: 16px;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        button {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 18px;
+            background: #111827;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #374151;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .error {
+            display: none;
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 10px;
+            background: #fee2e2;
+            color: #991b1b;
+            font-size: 14px;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 16px;
+            text-align: center;
+            color: #111827;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">Stripe Checkout</div>
+
+        {% if item.image %}
+            <img class="item-image" src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+            <div class="image-placeholder">No image</div>
+        {% endif %}
+
+        <h1>{{ item.name }}</h1>
+
+        <p class="description">{{ item.description }}</p>
+
+        <div class="price">
+            {{ item.price }}
+            <span>{{ item.currency }}</span>
+        </div>
+
+        <button id="buy-button">Buy now</button>
+
+        <div id="error-message" class="error"></div>
+
+        <a class="back-link" href="/">Back to items</a>
+    </div>
+
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <script>
+        const stripe = Stripe("{{ stripe_public_key }}");
+        const buyButton = document.getElementById("buy-button");
+        const errorMessage = document.getElementById("error-message");
+
+        buyButton.addEventListener("click", function () {
+            buyButton.disabled = true;
+            buyButton.innerText = "Redirecting...";
+            errorMessage.style.display = "none";
+
+            fetch("{% url 'buy_item' item.id %}", {
+                method: "GET"
+            })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (session) {
+                if (session.error) {
+                    throw new Error(session.error);
+                }
+
+                return stripe.redirectToCheckout({
+                    sessionId: session.id
+                });
+            })
+            .catch(function (error) {
+                errorMessage.innerText = error.message;
+                errorMessage.style.display = "block";
+
+                buyButton.disabled = false;
+                buyButton.innerText = "Buy now";
+            });
+        });
+    </script>
+</body>
+</html>
